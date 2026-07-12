@@ -23,17 +23,18 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: claude/combolith/app/package-lock.json
+          cache-dependency-path: app/package-lock.json
       - name: Install dependencies
-        working-directory: claude/combolith/app
+        working-directory: app
         run: npm ci
       - name: Build
-        working-directory: claude/combolith/app
+        working-directory: app
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: claude/combolith/app/dist
+          path: app/dist
+
 
   deploy:
     needs: build
