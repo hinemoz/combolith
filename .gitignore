@@ -1,6 +1,10 @@
 # Backup of app before adding move-library feature (kept locally only)
 app_backup/
 
+# Internal scratch notes (not for public repo)
+仕様書.md
+
+
 # Node / build artifacts
 node_modules/
 dist/
