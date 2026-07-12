@@ -1,0 +1,46 @@
+name: Pre-push Safety Check
+
+# NGファイル名や機密情報らしきパターンが混入していないかをpush/PR時に自動チェックするワークフロー
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  safety-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for forbidden file names
+        run: |
+          echo "Checking for forbidden file name patterns..."
+          # 「仕様書」「メモ」「TODO」「下書き」などの内部向けファイル名が含まれていないかチェック
+          FORBIDDEN_PATTERNS="仕様書 メモ帳 下書き scratch todo_private secret"
+          FOUND=0
+          for pattern in $FORBIDDEN_PATTERNS; do
+            matches=$(git ls-files | grep -i "$pattern" || true)
+            if [ -n "$matches" ]; then
+              echo "::warning::Forbidden-like file name found matching '$pattern':"
+              echo "$matches"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::error::One or more files with internal/embarrassing naming patterns were detected. Please remove them or add to .gitignore before merging."
+            exit 1
+          fi
+          echo "No forbidden file names found."
+
+      - name: Check for potential secrets
+        run: |
+          echo "Scanning for potential secrets (API keys, tokens, passwords)..."
+          # 簡易的な秘密情報パターン検出（AWSキー、GitHub PAT、秘密鍵ヘッダ等）
+          PATTERN='(ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|sk-[A-Za-z0-9]{20,})'
+          if git grep -nE "$PATTERN" -- . ':(exclude).github/workflows/pre-push-check.yml' > /tmp/secret_matches.txt 2>/dev/null; then
+            echo "::error::Potential secret detected in the following locations:"
+            cat /tmp/secret_matches.txt
+            exit 1
+          fi
+          echo "No obvious secrets found."
